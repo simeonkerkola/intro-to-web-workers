@@ -1,13 +1,23 @@
 (function Blog() {
   "use strict";
 
-  var offlineIcon;
+  let offlineIcon;
   let isOnline = "onLine" in navigator ? navigator.onLine : true;
-  var isLoggedIn = /isLoggedIn=1/.test(document.cookie.toString() || "");
+  let isLoggedIn = /isLoggedIn=1/.test(document.cookie.toString() || "");
+  const usingSW = "serviceWorker" in navigator;
+  let swrRgistration;
+  let svworker;
 
+  initServiceWorker().catch(console.error);
   document.addEventListener("DOMContentLoaded", ready, false);
 
   // **********************************
+
+  async function initServiceWorker() {
+    swrRgistration = await navigator.serviceWorker.register("/sw.js", {
+      updateViaCache: "none"
+    });
+  }
 
   function ready() {
     offlineIcon = document.getElementById("connectivity-status");
