@@ -1,4 +1,7 @@
 {
+  "plugins": [
+    "prettier"
+  ],
   "parserOptions": {
     "ecmaVersion": 6,
     "sourceType": "module",
@@ -6,12 +9,10 @@
         "jsx": true
     }
 },
-  "plugins": [
-    "prettier"
-  ],
   "rules": {
-    "indent": ["error", "tab"],
+    "prettier/prettier": "error",
+    "indent": ["error", 2],
     "semi": "error",
-    "no-console": 1
+    "no-console": 0
   }
 }
