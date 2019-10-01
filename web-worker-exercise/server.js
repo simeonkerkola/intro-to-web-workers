@@ -1,17 +1,17 @@
-'use strict';
+"use strict";
 
-var path = require('path');
-var http = require('http');
-var nodeStaticAlias = require('node-static-alias');
+var path = require("path");
+var http = require("http");
+var nodeStaticAlias = require("node-static-alias");
 
 const PORT = 8049;
-const WEB_DIR = path.join(__dirname, 'web');
+const WEB_DIR = path.join(__dirname, "web");
 
 var httpServer = http.createServer(handleRequest);
 
 var staticServer = new nodeStaticAlias.Server(WEB_DIR, {
-  serverInfo: 'Web Workers',
-  cache: 1,
+  serverInfo: "Web Workers",
+  cache: 1
 });
 
 httpServer.listen(PORT);
@@ -21,12 +21,12 @@ console.log(`Server started on http://localhost:${PORT}...`);
 
 async function handleRequest(req, res) {
   // handle static file requests
-  if (['GET', 'HEAD'].includes(req.method)) {
+  if (["GET", "HEAD"].includes(req.method)) {
     // special handling for empty favicon
-    if (req.url == '/favicon.ico') {
+    if (req.url == "/favicon.ico") {
       res.writeHead(204, {
-        'Content-Type': 'image/x-icon',
-        'Cache-Control': 'public, max-age: 604800',
+        "Content-Type": "image/x-icon",
+        "Cache-Control": "public, max-age: 604800"
       });
       res.end();
       return;

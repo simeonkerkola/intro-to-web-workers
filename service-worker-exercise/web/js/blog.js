@@ -1,16 +1,14 @@
-(function Blog(){
-	"use strict";
+(function Blog() {
+  "use strict";
 
-	var offlineIcon;
-	var isLoggedIn = /isLoggedIn=1/.test(document.cookie.toString() || "");
+  var offlineIcon;
+  var isLoggedIn = /isLoggedIn=1/.test(document.cookie.toString() || "");
 
-	document.addEventListener("DOMContentLoaded",ready,false);
+  document.addEventListener("DOMContentLoaded", ready, false);
 
+  // **********************************
 
-	// **********************************
-
-	function ready() {
-		offlineIcon = document.getElementById("connectivity-status");
-	}
-
+  function ready() {
+    offlineIcon = document.getElementById("connectivity-status");
+  }
 })();
