@@ -5,8 +5,8 @@
   let isOnline = "onLine" in navigator ? navigator.onLine : true;
   let isLoggedIn = /isLoggedIn=1/.test(document.cookie.toString() || "");
   const usingSW = "serviceWorker" in navigator;
-  let swrRgistration;
-  let svworker;
+  let swRegistration;
+  let svcworker;
 
   initServiceWorker().catch(console.error);
   document.addEventListener("DOMContentLoaded", ready, false);
@@ -14,9 +14,23 @@
   // **********************************
 
   async function initServiceWorker() {
-    swrRgistration = await navigator.serviceWorker.register("/sw.js", {
+    // special handling for service-worker (virtual path) in server.js
+    swRegistration = await navigator.serviceWorker.register("/sw.js", {
       updateViaCache: "none"
     });
+
+    svcworker =
+      swRegistration.installing ||
+      swRegistration.waiting ||
+      swRegistration.active;
+
+    // controllerchange, New service worker has taken control over the page
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      function onController() {
+        svcworker = navigator.serviceWorker.controller;
+      }
+    );
   }
 
   function ready() {
