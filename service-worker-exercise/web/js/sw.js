@@ -1,7 +1,7 @@
 "use strict";
 
 // Making sure the sw gets updated after changes
-const version = 1;
+const version = 4;
 let isOnline = false;
 let isLoggedIn = false;
 const cacheName = `ramblings-${version}`;
@@ -18,7 +18,7 @@ const urlsToCache = {
     "js/home.js",
     "js/login.js",
     "js/add-post.js",
-    "/css/styles.css",
+    "/css/style.css",
     "/images/logo.gif",
     "/images/offline.png"
   ]
@@ -34,6 +34,7 @@ main().catch(console.error);
 
 async function main() {
   await sendMessage({ requestStatusUpdate: true });
+  await cacheLoggedOutFiles();
 }
 
 async function onInstall() {
@@ -76,5 +77,37 @@ function onActivate(e) {
 async function handleActivation() {
   // Claim all the open clients (ie. multiple tabs of the site)
   await clients.claim();
+  await cacheLoggedOutFiles(/* forceReload */ true);
   console.log(`Service worker (${version}) is activated.`);
+}
+
+async function cacheLoggedOutFiles(forceReload = false) {
+  // caches = storage mechanism for Request / Response object
+  const cache = await caches.open(cacheName);
+
+  return Promise.all(
+    urlsToCache.loggedOut.map(async url => {
+      try {
+        let res;
+        if (!forceReload) {
+          res = await cache.match(url);
+          if (res) {
+            return res;
+          }
+        }
+
+        let fetchOptions = {
+          method: "GET",
+          cache: "no-cache", // Tell the browser not to cache this, we want fresh results
+          credentials: "omit" // Strip off the cookies, since this is a logged out resourses
+        };
+        res = await fetch(url, fetchOptions);
+        if (res.ok) {
+          // If we were to put the response to the cache and return it to the browser,
+          // res can only be used once, so we'd have to .clone() it to the cache, and the return the original.
+          await cache.put(url, res);
+        }
+      } catch (err) {}
+    })
+  );
 }
