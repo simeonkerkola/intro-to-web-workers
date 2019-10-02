@@ -2,9 +2,27 @@
 
 // Making sure the sw gets updated after changes
 const version = 1;
-
 let isOnline = false;
 let isLoggedIn = false;
+const cacheName = `ramblings-${version}`;
+
+const urlsToCache = {
+  loggedOut: [
+    "/",
+    "/about",
+    "/contact",
+    "/404",
+    "/login",
+    "/offline",
+    "js/blog.js",
+    "js/home.js",
+    "js/login.js",
+    "js/add-post.js",
+    "/css/styles.css",
+    "/images/logo.gif",
+    "/images/offline.png"
+  ]
+};
 
 self.addEventListener("install", onInstall);
 self.addEventListener("activate", onActivate);
