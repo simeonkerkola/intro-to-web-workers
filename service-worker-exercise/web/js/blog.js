@@ -24,13 +24,41 @@
       swRegistration.waiting ||
       swRegistration.active;
 
+    sendStatusUpdate(svcworker);
+
     // controllerchange, New service worker has taken control over the page
     navigator.serviceWorker.addEventListener(
       "controllerchange",
       function onController() {
         svcworker = navigator.serviceWorker.controller;
+        sendStatusUpdate(svcworker);
       }
     );
+
+    navigator.serviceWorker.addEventListener("message", onSWMessage);
+  }
+
+  function onSWMessage(e) {
+    const { data } = e;
+    if (data.requestStatusUpdates) {
+      const port = e.ports && evt.ports[0];
+      console.log("Received status update!");
+      sendStatusUpdate(port);
+    }
+  }
+
+  function sendStatusUpdate(target) {
+    sendSWMessage({ statusUpdate: { isOnline, isLoggedIn } }, target);
+  }
+
+  async function sendSWMessage(msg, target) {
+    if (target) {
+      target.postMessage(msg);
+    } else if (svcworker) {
+      svcworker.postMessage(msg);
+    } else {
+      navigator.serviceWorker.controller.postMessage(msg);
+    }
   }
 
   function ready() {
@@ -42,11 +70,15 @@
 
     window.addEventListener("online", function online() {
       offlineIcon.classList.add("hidden");
+      sendStatusUpdate();
+      console.log("online");
       isOnline = true;
     });
 
     window.addEventListener("offline", function offline() {
       offlineIcon.classList.remove("hidden");
+      sendStatusUpdate();
+      console.log("offline");
       isOnline = false;
     });
   }
