@@ -70,16 +70,16 @@
 
     window.addEventListener("online", function online() {
       offlineIcon.classList.add("hidden");
-      sendStatusUpdate();
       console.log("online");
       isOnline = true;
+      sendStatusUpdate();
     });
 
     window.addEventListener("offline", function offline() {
       offlineIcon.classList.remove("hidden");
-      sendStatusUpdate();
       console.log("offline");
       isOnline = false;
+      sendStatusUpdate();
     });
   }
 })();
