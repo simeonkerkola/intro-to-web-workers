@@ -1,7 +1,7 @@
 "use strict";
 
 // Making sure the sw gets updated after changes
-const version = 4;
+const version = 6;
 let isOnline = false;
 let isLoggedIn = false;
 const cacheName = `ramblings-${version}`;
@@ -27,6 +27,7 @@ const urlsToCache = {
 self.addEventListener("install", onInstall);
 self.addEventListener("activate", onActivate);
 self.addEventListener("message", onMessage);
+self.addEventListener("fetch", onFetch);
 
 main().catch(console.error);
 
@@ -68,6 +69,41 @@ function onMessage({ data }) {
       version
     });
   }
+}
+
+function onFetch(e) {
+  e.respondWith(router(e.request));
+}
+
+async function router(req) {
+  const url = new URL(req.url);
+  const reqURL = url.pathname;
+  const cache = await caches.open(cacheName);
+
+  // Only cache the resources from our server
+  if (url.origin == location.origin) {
+    let res;
+    try {
+      let fetchOptions = {
+        credentials: "omit",
+        cache: "no-store",
+        method: req.method,
+        headers: req.headers
+      };
+
+      res = await fetch(reqURL, fetchOptions);
+      if (res && res.ok) {
+        // response can only be used once, so we need to clone it to the cache, and return the original
+        await cache.put(reqURL, res.clone());
+        return res;
+      }
+    } catch (err) {}
+
+    // If request fails, ie. client offline, try to get it from the cache
+    res = await cache.match(reqURL);
+    if (res) return res.clone();
+  }
+  // TODO: Figure out CORS requests
 }
 
 function onActivate(e) {
