@@ -75,10 +75,26 @@ function onActivate(e) {
   e.waitUntil(handleActivation());
 }
 async function handleActivation() {
+  await clearCaches();
+
   // Claim all the open clients (ie. multiple tabs of the site)
   await clients.claim();
   await cacheLoggedOutFiles(/* forceReload */ true);
   console.log(`Service worker (${version}) is activated.`);
+}
+
+async function clearCaches() {
+  const cacheNames = await caches.keys();
+  const oldNames = cacheNames.filter(name => {
+    if (/^ramblings-\d+$/.test(name)) {
+      let [, cacheVersion] = name.match(/^ramblings-(\d+)$/);
+
+      cacheVersion = cacheVersion != null ? Number(cacheVersion) : cacheVersion;
+      return cacheVersion > 0 && cacheVersion != version;
+    }
+  });
+
+  return Promise.all(oldNames.map(cacheName => caches.delete(cacheName)));
 }
 
 async function cacheLoggedOutFiles(forceReload = false) {
