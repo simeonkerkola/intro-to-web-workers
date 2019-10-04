@@ -82,28 +82,104 @@ async function router(req) {
 
   // Only cache the resources from our server
   if (url.origin == location.origin) {
-    let res;
-    try {
-      let fetchOptions = {
-        credentials: "omit",
-        cache: "no-store",
-        method: req.method,
-        headers: req.headers
-      };
+    // are we making an API request?
+    if (/^\/api\/.+$/.test(reqURL)) {
+      let res;
 
-      res = await fetch(reqURL, fetchOptions);
-      if (res && res.ok) {
-        // response can only be used once, so we need to clone it to the cache, and return the original
-        await cache.put(reqURL, res.clone());
-        return res;
+      if (isOnline) {
+        try {
+          let fetchOptions = {
+            credentials: "same-origin",
+            cache: "no-store",
+            method: req.method,
+            headers: req.headers
+          };
+
+          res = await fetch(req.url, fetchOptions);
+          if (res && res.ok) {
+            if (req.method == "GET") {
+              // response can only be used once, so we need to clone it to the cache, and return the original
+              await cache.put(reqURL, res.clone());
+            }
+            return res;
+          }
+        } catch (err) {}
       }
-    } catch (err) {}
+      // If request fails, ie. client offline, try to get it from the cache
+      res = await cache.match(reqURL);
+      if (res) return res;
+      return notFoundResponse();
+    }
+    // are we requesting a page?
+    else if (req.headers.get("Accept").includes("text/html")) {
+      // login-aware requests?
+      if (/^\/(?:login|logout|add-post)$/.test(reqURL)) {
+        // TODO
+      }
+      // otherwise, just use "network-and-cache"
+      else {
+        let res;
 
-    // If request fails, ie. client offline, try to get it from the cache
-    res = await cache.match(reqURL);
-    if (res) return res.clone();
+        if (isOnline) {
+          try {
+            let fetchOptions = {
+              method: req.method,
+              headers: req.headers,
+              cache: "no-store"
+            };
+            res = await fetch(req.url, fetchOptions);
+            if (res && res.ok) {
+              if (!res.headers.get("X-Not-Found")) {
+                await cache.put(reqURL, res.clone());
+              }
+              return res;
+            }
+          } catch (err) {}
+        }
+
+        // fetch failed, so try the cache
+        res = await cache.match(reqURL);
+        if (res) {
+          return res;
+        }
+
+        // otherwise, return an offline-friendly page
+        return cache.match("/offline");
+      }
+    }
+    // all other files use "cache-first"
+    else {
+      let res = await cache.match(reqURL);
+      if (res) {
+        return res;
+      } else {
+        if (isOnline) {
+          try {
+            let fetchOptions = {
+              method: req.method,
+              headers: req.headers,
+              cache: "no-store"
+            };
+            res = await fetch(req.url, fetchOptions);
+            if (res && res.ok) {
+              await cache.put(reqURL, res.clone());
+              return res;
+            }
+          } catch (err) {}
+        }
+
+        // otherwise, force a network-level 404 response
+        return notFoundResponse();
+      }
+    }
   }
-  // TODO: Figure out CORS requests
+}
+
+function notFoundResponse() {
+  return new Response("", {
+    status: 404,
+    statusText: "Not found"
+  });
 }
 
 function onActivate(e) {
