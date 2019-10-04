@@ -42,8 +42,11 @@
     const { data } = e;
     if (data.requestStatusUpdates) {
       const port = e.ports && evt.ports[0];
-      console.log("Received status update!");
       sendStatusUpdate(port);
+    } else if (data == "force-logout") {
+      document.cookie = "isLoggedIn=";
+      isLoggedIn = false;
+      sendStatusUpdate();
     }
   }
 
