@@ -1,10 +1,11 @@
 "use strict";
 
 // Making sure the sw gets updated after changes
-const version = 8;
+const version = 9;
 let isOnline = false;
 let isLoggedIn = false;
 const cacheName = `ramblings-${version}`;
+let allPostsCaching = false;
 
 const urlsToCache = {
   loggedOut: [
@@ -36,11 +37,28 @@ main().catch(console.error);
 async function main() {
   await sendMessage({ requestStatusUpdate: true });
   await cacheLoggedOutFiles();
+  return cacheAllPosts();
 }
 
 async function onInstall() {
   console.log(`Service worker (${version}) is installed.`);
   self.skipWaiting();
+}
+
+function onActivate(e) {
+  // Tell the browser not to shut us down, ie if the user leaves the site, while still activating
+  e.waitUntil(handleActivation());
+}
+async function handleActivation() {
+  await clearCaches();
+
+  // Claim all the open clients (ie. multiple tabs of the site)
+  await clients.claim();
+  await cacheLoggedOutFiles(/* forceReload */ true);
+  console.log(`Service worker (${version}) is activated.`);
+
+  // spin off background caching of all past posts (over time)
+  cacheAllPosts(/*forceReload=*/ true).catch(console.error);
 }
 
 async function sendMessage(msg) {
@@ -68,6 +86,85 @@ function onMessage({ data }) {
       isLoggedIn,
       version
     });
+  }
+}
+
+async function cacheAllPosts(forceReload = true) {
+  // is already caching posts?
+  if (allPostsCaching) return;
+  allPostsCaching = true;
+  await delay(5000);
+
+  const cache = await caches.open(cacheName);
+  let postIDs;
+
+  try {
+    if (isOnline) {
+      let fetchOptions = {
+        method: "GET",
+        cache: "no-store",
+        credentials: "omit"
+      };
+      let res = await fetch("/api/get-posts", fetchOptions);
+      if (res && res.ok) {
+        await cache.put("/api/get-posts", res.clone());
+        postIDs = await res.json();
+      }
+    } else {
+      let res = await cache.match("/api/get-posts");
+      if (res) {
+        let resCopy = res.clone();
+        postIDs = await res.json();
+      }
+      // caching not started yet, try to start again later
+      else {
+        allPostsCaching = false;
+        return cacheAllPosts(forceReload);
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  if (postIDs && postIDs.length) {
+    return cachePost(postIDs.shift());
+  } else {
+    allPostsCaching = false;
+  }
+  // **************************
+  async function cachePost(postID) {
+    const postURL = `/post/${postID}`;
+    let needCaching = true;
+
+    if (forceReload) {
+      let res = await cache.match(postURL);
+      if (res) {
+        needCaching = false;
+      }
+    }
+    if (needCaching) {
+      await delay(10000);
+      if (isOnline) {
+        try {
+          let fetchOptions = {
+            method: "GET",
+            cache: "no-store",
+            credentials: "omit"
+          };
+          let res = await fetch(postURL, fetchOptions);
+          if (res && res.ok) {
+            await cache.put(postURL, res.clone());
+            needCaching = false;
+          }
+        } catch (err) {}
+
+        // Failed, try caching this post again?
+        if (needCaching) return cachePost(postID);
+      }
+    }
+
+    // any more posts to cache?
+    if (postIDs.length) return cachePost(postIDs.shift());
+    else allPostsCaching = false;
   }
 }
 
@@ -320,19 +417,6 @@ function delay(ms) {
   return new Promise(function c(res) {
     setTimeout(res, ms);
   });
-}
-
-function onActivate(e) {
-  // Tell the browser not to shut us down, ie if the user leaves the site, while still activating
-  e.waitUntil(handleActivation());
-}
-async function handleActivation() {
-  await clearCaches();
-
-  // Claim all the open clients (ie. multiple tabs of the site)
-  await clients.claim();
-  await cacheLoggedOutFiles(/* forceReload */ true);
-  console.log(`Service worker (${version}) is activated.`);
 }
 
 async function clearCaches() {
