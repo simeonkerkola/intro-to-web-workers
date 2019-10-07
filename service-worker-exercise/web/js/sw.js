@@ -1,5 +1,7 @@
 "use strict";
 
+importScripts("/js/external/idb-keyval-iife.min.js");
+
 // Making sure the sw gets updated after changes
 const version = 9;
 let isOnline = false;
@@ -41,7 +43,7 @@ async function main() {
 }
 
 async function onInstall() {
-  console.log(`Service worker (${version}) is installed.`);
+  console.log(`Service worker (v ${version}) is installed.`);
   self.skipWaiting();
 }
 
@@ -200,6 +202,10 @@ async function router(req) {
         if (req.method == "GET") {
           // response can only be used once, so we need to clone it to the cache, and return the original
           await cache.put(reqURL, res.clone());
+        }
+        // clear offline backup of succesful post?
+        else if (reqURL == "/api/add-post") {
+          await idbKeyval.del("add-post-backup");
         }
         return res;
       }

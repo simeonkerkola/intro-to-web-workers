@@ -1,4 +1,4 @@
-(function Blog() {
+(function Blog(global) {
   "use strict";
 
   let offlineIcon;
@@ -9,6 +9,11 @@
   let svcworker;
 
   initServiceWorker().catch(console.error);
+
+  function isBlogOnline() {
+    return isOnline;
+  }
+  global.isBlogOnline = isBlogOnline;
   document.addEventListener("DOMContentLoaded", ready, false);
 
   // **********************************
@@ -78,11 +83,15 @@
       sendStatusUpdate();
     });
 
-    window.addEventListener("offline", function offline() {
-      offlineIcon.classList.remove("hidden");
-      console.log("offline");
-      isOnline = false;
-      sendStatusUpdate();
-    });
+    window.addEventListener(
+      "offline",
+      function offline() {
+        offlineIcon.classList.remove("hidden");
+        console.log("offline");
+        isOnline = false;
+        sendStatusUpdate();
+      },
+      false
+    );
   }
-})();
+})(window);
