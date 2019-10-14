@@ -3,7 +3,7 @@
 importScripts("/js/external/idb-keyval-iife.min.js");
 
 // Making sure the sw gets updated after changes
-const version = 9;
+var version = 10;
 let isOnline = false;
 let isLoggedIn = false;
 const cacheName = `ramblings-${version}`;
@@ -17,10 +17,10 @@ const urlsToCache = {
     "/404",
     "/login",
     "/offline",
-    "js/blog.js",
-    "js/home.js",
-    "js/login.js",
-    "js/add-post.js",
+    "/js/blog.js",
+    "/js/home.js",
+    "/js/login.js",
+    "/js/add-post.js",
     "/css/style.css",
     "/images/logo.gif",
     "/images/offline.png"
@@ -79,10 +79,18 @@ async function sendMessage(msg) {
   );
 }
 
+async function checkPostBackup() {
+  if (!isLoggedIn) {
+    const addPostBackup = await idbKeyval.get("add-post-backup");
+    if (addPostBackup) idbKeyval.del("add-post-backup");
+  }
+}
+
 function onMessage({ data }) {
   if (data.statusUpdate) {
     // destructure and assign to the variables defined on the top
     ({ isLoggedIn, isOnline } = data.statusUpdate);
+    checkPostBackup();
     console.log("Service worker status update", {
       isOnline,
       isLoggedIn,
@@ -393,7 +401,6 @@ async function safeRequest(
       } else {
         res = await fetch(req.url, options);
       }
-
       // Handle redirects from the server
       if (res && (res.ok || res.type == "opaqueredirect")) {
         if (cacheResponse) {

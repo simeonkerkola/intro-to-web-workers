@@ -2,13 +2,15 @@
   "use strict";
 
   let offlineIcon;
-  let isOnline = "onLine" in navigator ? navigator.onLine : true;
+  let isOnline = "onLine" in navigator && navigator.onLine;
   let isLoggedIn = /isLoggedIn=1/.test(document.cookie.toString() || "");
   const usingSW = "serviceWorker" in navigator;
   let swRegistration;
   let svcworker;
 
-  initServiceWorker().catch(console.error);
+  if (usingSW) {
+    initServiceWorker().catch(console.error);
+  }
 
   function isBlogOnline() {
     return isOnline;
@@ -45,6 +47,7 @@
 
   function onSWMessage(e) {
     const { data } = e;
+    console.log({ data });
     if (data.requestStatusUpdates) {
       const port = e.ports && evt.ports[0];
       sendStatusUpdate(port);
@@ -76,18 +79,22 @@
       offlineIcon.classList.remove("hidden");
     }
 
-    window.addEventListener("online", function online() {
-      offlineIcon.classList.add("hidden");
-      console.log("online");
-      isOnline = true;
-      sendStatusUpdate();
-    });
+    window.addEventListener(
+      "online",
+      function online() {
+        offlineIcon.classList.add("hidden");
+        console.log("online new2", navigator.onLine);
+        isOnline = true;
+        sendStatusUpdate();
+      },
+      false
+    );
 
     window.addEventListener(
       "offline",
       function offline() {
         offlineIcon.classList.remove("hidden");
-        console.log("offline");
+        console.log("offline new", navigator.onLine);
         isOnline = false;
         sendStatusUpdate();
       },
